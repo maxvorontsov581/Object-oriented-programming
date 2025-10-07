@@ -1,0 +1,283 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+public class ЛинияАвтомата
+{
+    public int НомерЛинии { get; set; }
+    public int Цена { get; set; }
+    public int Количество { get; set; }
+    public ЛинияАвтомата(int номерЛинии, int цена, int количество)
+    {
+        НомерЛинии = номерЛинии;
+        Цена = цена;
+        Количество = количество;
+    }
+} 
+public class ТорговыйАвтомат
+{
+    private List<ЛинияАвтомата> линии;
+    private int внесеннаяСумма;
+    private int баланс;
+    private int[] номиналыДенег = { 1, 2, 5, 10, 50, 100, 200, 500, 1000 };
+    public ТорговыйАвтомат()
+    {
+        линии = new List<ЛинияАвтомата>
+        {
+            new ЛинияАвтомата(1, 100, 4),
+            new ЛинияАвтомата(2, 200, 4)
+        };
+        внесеннаяСумма = 0;
+        баланс = 0;
+    } 
+    public void ВнестиДеньги() 
+    {
+        Console.WriteLine("\n ВНЕСЕНИЕ ДЕНЕГ ");
+        Console.WriteLine("Доступные номиналы: 1, 2, 5, 10, 50, 100, 200, 500, 1000 руб");
+        Console.Write("Введите сумму: ");
+        
+        if (int.TryParse(Console.ReadLine(), out int сумма))
+        {
+            if (номиналыДенег.Contains(сумма))
+            {
+                внесеннаяСумма += сумма;
+                Console.WriteLine($"Внесено: {сумма} руб");
+                Console.WriteLine($"Всего внесено: {внесеннаяСумма} руб");
+            }
+            else
+            {
+                Console.WriteLine("Неверный номинал");
+            }
+        }
+        else
+        {
+            Console.WriteLine("Неправильный ввод, введите число");
+        }
+    }
+    public void ВыбратьЛинию()
+    {
+        Console.WriteLine("\n ВЫБОР ЛИНИИ ");
+        Console.WriteLine("1. Линия 1 - 100 руб");
+        Console.WriteLine("2. Линия 2 - 200 руб");
+        Console.Write("Введите номер линии 1 или 2: ");
+        
+        if (int.TryParse(Console.ReadLine(), out int номерЛинии))
+        {
+            var линия = линии.FirstOrDefault(l => l.НомерЛинии == номерЛинии);
+            
+            if (линия == null)
+            {
+                Console.WriteLine("Линия не найдена");
+                return;
+            }
+
+            if (линия.Количество <= 0)
+            {
+                Console.WriteLine("Товары закончились");
+                return;
+            }
+
+            if (внесеннаяСумма < линия.Цена)
+            {
+                Console.WriteLine($"Недостаточно средств {линия.Цена - внесеннаяСумма} руб");
+                return;
+            }
+
+            линия.Количество--;
+            int сдача = внесеннаяСумма - линия.Цена;
+            баланс += линия.Цена;
+
+            Console.WriteLine($"\n Выдача товара из линии {линия.НомерЛинии}");
+            Console.WriteLine($"Спасибо за покупку!");
+
+            if (сдача > 0)
+            {
+                Console.WriteLine($"Сдача: {сдача} руб");
+                ВыдатьСдачу(сдача);
+            }
+
+            внесеннаяСумма = 0;
+        }
+        else
+        {
+            Console.WriteLine("Неверный номер линии");
+        }
+    }
+    public void ОтменитьОперацию()
+    {
+        if (внесеннаяСумма > 0)
+        {
+            Console.WriteLine($"\nВозврат: {внесеннаяСумма} руб");
+            ВыдатьСдачу(внесеннаяСумма);
+            внесеннаяСумма = 0;
+        }
+            
+    }
+    private void ВыдатьСдачу(int сумма)
+    {
+        int остаток = сумма;
+        var монетыСдачи = new Dictionary<int, int>();
+        
+        int[] отсортированныеНоминалы = номиналыДенег.OrderByDescending(d => d).ToArray();
+        
+        foreach (int монета in отсортированныеНоминалы)
+        {
+            if (остаток <= 0) break;
+            
+            int количество = остаток / монета;
+            if (количество > 0)
+            {
+                монетыСдачи[монета] = количество;
+                остаток -= количество * монета;
+            }
+        }
+
+        Console.WriteLine("Ваша сдача:");
+        foreach (var монета in монетыСдачи)
+        {
+            Console.WriteLine($"  {монета.Value} × {монета.Key} руб");
+        }
+    }
+    public void РежимАдминистратора()
+    {
+        Console.Write("\n Введите пароль администратора: ");
+        string пароль = Console.ReadLine();
+        
+        if (пароль != "1234")
+        {
+            Console.WriteLine("Доступ запрещен");
+            return;
+        }
+
+        while (true)
+        {
+            Console.WriteLine("\n РЕЖИМ АДМИНИСТРАТОРА ");
+            Console.WriteLine("1. Выбор товара");
+            Console.WriteLine("2. Пополнить запас автомата");
+            Console.WriteLine("3. Баланс");
+            Console.WriteLine("4. Собрать деньги");
+            Console.WriteLine("0. Выйти из режима администратора");
+            Console.Write("Выберите опцию: ");
+
+            string выбор = Console.ReadLine();
+            
+            switch (выбор)
+            {
+                case "1":
+                    ПоказатьВсеЛинииАдмин();
+                    break;
+                case "2":
+                    ПополнитьЛинию();
+                    break;
+                case "3":
+                    Console.WriteLine($"\nБаланс: {баланс} руб");
+                    break;
+                case "4":
+                    СобратьДеньги();
+                    break;
+                case "0":
+                    return;
+                default:
+                    Console.WriteLine("Неверная опция");
+                    break;
+            }
+        }
+    }
+    private void ПоказатьВсеЛинииАдмин()
+    {
+        Console.WriteLine("\n ВСЕ ЛИНИИ (АДМИНИСТРАТОР) ");
+        foreach (var линия in линии)
+        {
+            int проданоШт = 4 - линия.Количество;
+            Console.WriteLine($"Линия {линия.НомерЛинии} - {линия.Цена} руб | Запас: {линия.Количество} | Выручка: {линия.Цена * проданоШт} руб");
+        }
+    }
+    private void ПополнитьЛинию()
+    {
+        ПоказатьВсеЛинииАдмин();
+        Console.Write("Введите номер линии для пополнения: ");
+        
+        if (int.TryParse(Console.ReadLine(), out int номерЛинии))
+        {
+            var линия = линии.FirstOrDefault(l => l.НомерЛинии == номерЛинии);
+            if (линия != null)
+            {
+                Console.Write("Введите количество для добавления: ");
+                if (int.TryParse(Console.ReadLine(), out int количество) && количество > 0)
+                {
+                    линия.Количество += количество;
+                    Console.WriteLine($"Линия пополнена. Новое количество: {линия.Количество}");
+                }
+                else
+                {
+                    Console.WriteLine("Неверное количество");
+                }
+            }
+            else
+            {
+                Console.WriteLine("Линия не найдена");
+            }
+        }
+        else
+        {
+            Console.WriteLine("Неверный номер линии");
+        }
+    }
+    private void СобратьДеньги()
+    {
+        Console.WriteLine($"\nСбор {баланс} руб");
+        баланс = 0;
+        Console.WriteLine("Деньги собраны. Счетчик обнулен");
+    }
+    public void ПоказатьБаланс()
+    {
+        Console.WriteLine($"\nТекущий баланс: {внесеннаяСумма} руб");
+    }
+}
+
+class Программа
+{
+    static void Main()
+    {
+        ТорговыйАвтомат автомат = new ТорговыйАвтомат();
+        
+        Console.WriteLine(" ТОРГОВЫЙ АВТОМАТ ");
+        
+        while (true)
+        {
+            Console.WriteLine("\n ГЛАВНОЕ МЕНЮ ");
+            Console.WriteLine("1. Внести деньги");
+            Console.WriteLine("2. Выбрать товар");
+            Console.WriteLine("3. Отменить операцию / Вернуть деньги");
+            Console.WriteLine("4. Проверить баланс");
+            Console.WriteLine("9. Режим администратора");
+            Console.WriteLine("0. Выход");
+            Console.Write("Выберите опцию: ");
+
+            string выбор = Console.ReadLine();
+            switch (выбор)
+            {
+                case "1":
+                    автомат.ВнестиДеньги();
+                    break;
+                case "2":
+                    автомат.ВыбратьЛинию();
+                    break;
+                case "3":
+                    автомат.ОтменитьОперацию();
+                    break;
+                case "4":
+                    автомат.ПоказатьБаланс();
+                    break;
+                case "9":
+                    автомат.РежимАдминистратора();
+                    break;
+                case "0":
+                    Console.WriteLine("Спасибо за покупку!");
+                    return;
+                default:
+                    Console.WriteLine("Неверная опция. Попробуйте снова");
+                    break;
+            }
+        }
+    }
+}
