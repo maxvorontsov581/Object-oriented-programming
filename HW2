@@ -1,0 +1,713 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Xunit;
+
+namespace CourseManagementSingleFile.Tests
+{
+    public class CourseTests
+    {
+        [Fact]
+        public void CreateOnlineCourse()
+        {
+            var url = new Uri("https://zoom.us");
+            var course = new OnlineCourse("C#", "Zoom", url);
+            
+            Assert.Equal("C#", course.Title);
+            Assert.Equal("Zoom", course.Platform);
+            Assert.Equal(url, course.Url);
+        }
+
+        [Fact]
+        public void CreateOnlineCourse_WithoutUrl()
+        {
+            var course = new OnlineCourse("Java", "Teams", null);
+            
+            Assert.Equal("Java", course.Title);
+            Assert.Equal("Teams", course.Platform);
+            Assert.Null(course.Url);
+        }
+
+        [Fact]
+        public void CreateOfflineCourse()
+        {
+            var course = new OfflineCourse("Math", "Building A", "101");
+            
+            Assert.Equal("Math", course.Title);
+            Assert.Equal("Building A", course.Location);
+            Assert.Equal("101", course.Room);
+        }
+
+        [Fact]
+        public void CreateStudent()
+        {
+            var student = new Student("Alex");
+            
+            Assert.Equal("Alex", student.Name);
+            Assert.NotEqual(Guid.Empty, student.Id);
+        }
+
+        [Fact]
+        public void CreateInstructor()
+        {
+            var instructor = new Instructor("Dr. Smith");
+            
+            Assert.Equal("Dr. Smith", instructor.Name);
+            Assert.NotEqual(Guid.Empty, instructor.Id);
+        }
+
+        [Fact]
+        public void AssignInstructorToCourse()
+        {
+            var course = new OnlineCourse("C#", "Teams", null);
+            var instructor = new Instructor("John");
+            
+            course.AssignInstructor(instructor);
+            
+            Assert.Equal(instructor, course.Instructor);
+        }
+
+        [Fact]
+        public void AddStudentToCourse()
+        {
+            var course = new OfflineCourse("Math", "B1", "101");
+            var student = new Student("Alice");
+            
+            course.AddStudent(student);
+            
+            Assert.Contains(student, course.Students);
+            Assert.Single(course.Students);
+        }
+
+        [Fact]
+        public void RemoveStudentFromCourse()
+        {
+            var course = new OfflineCourse("Math", "B1", "101");
+            var student = new Student("Bob");
+            
+            course.AddStudent(student);
+            course.RemoveStudent(student.Id);
+            
+            Assert.Empty(course.Students);
+        }
+
+        [Fact]
+        public void RemoveInstructor()
+        {
+            var course = new OnlineCourse("Java", "Zoom", null);
+            var instructor = new Instructor("Mike");
+            
+            course.AssignInstructor(instructor);
+            course.RemoveInstructor();
+            
+            Assert.Null(course.Instructor);
+        }
+
+        [Fact]
+        public void RenameCourse()
+        {
+            var course = new OnlineCourse("Old", "P", null);
+            
+            course.Rename("New Title");
+            
+            Assert.Equal("New Title", course.Title);
+        }
+
+        [Fact]
+        public void OnlineCourse_SetUrl()
+        {
+            var course = new OnlineCourse("Test", "P", null);
+            
+            course.SetUrl("https://test.com");
+            
+            Assert.Equal("https://test.com/", course.Url?.ToString());
+        }
+
+        [Fact]
+        public void OnlineCourse_ChangePlatform()
+        {
+            var course = new OnlineCourse("Test", "OldPlatform", null);
+            
+            course.ChangePlatform("NewPlatform");
+            
+            Assert.Equal("NewPlatform", course.Platform);
+        }
+
+        [Fact]
+        public void OfflineCourse_ChangeRoom()
+        {
+            var course = new OfflineCourse("Test", "Loc", "OldRoom");
+            
+            course.ChangeRoom("NewRoom");
+            
+            Assert.Equal("NewRoom", course.Room);
+        }
+
+        [Fact]
+        public void OfflineCourse_ChangeLocation()
+        {
+            var course = new OfflineCourse("Test", "OldLoc", "R");
+            
+            course.ChangeLocation("NewLoc");
+            
+            Assert.Equal("NewLoc", course.Location);
+        }
+
+        [Fact]
+        public void Student_ToString()
+        {
+            var student = new Student("Alice");
+            var result = student.ToString();
+            
+            Assert.Contains("Alice", result);
+            Assert.Contains("Student", result);
+        }
+
+        [Fact]
+        public void Instructor_ToString()
+        {
+            var instructor = new Instructor("Dr. X");
+            var result = instructor.ToString();
+            
+            Assert.Contains("Dr. X", result);
+            Assert.Contains("Instructor", result);
+        }
+
+        [Fact]
+        public void Course_ToString()
+        {
+            var course = new OnlineCourse("C#", "Teams", null);
+            var instructor = new Instructor("John");
+            course.AssignInstructor(instructor);
+            
+            var result = course.ToString();
+            
+            Assert.Contains("C#", result);
+            Assert.Contains("John", result);
+            Assert.Contains("OnlineCourse", result);
+        }
+
+        [Fact]
+        public void Course_ToString_WithoutInstructor()
+        {
+            var course = new OnlineCourse("C#", "Teams", null);
+            
+            var result = course.ToString();
+            
+            Assert.Contains("(none)", result);
+        }
+    }
+
+    public class ErrorHandlingTests
+    {
+        [Fact]
+        public void AddSameStudentTwice_Throws()
+        {
+            var course = new OnlineCourse("Test", "P", null);
+            var student = new Student("Alice");
+            
+            course.AddStudent(student);
+            
+            var ex = Assert.Throws<InvalidOperationException>(() => course.AddStudent(student));
+            Assert.Contains("already", ex.Message);
+        }
+
+        [Fact]
+        public void RemoveNonExistentStudent_Throws()
+        {
+            var course = new OfflineCourse("Test", "L", "R");
+            
+            var ex = Assert.Throws<KeyNotFoundException>(() => course.RemoveStudent(Guid.NewGuid()));
+            Assert.Contains("not found", ex.Message);
+        }
+
+        [Fact]
+        public void EmptyTitle_Throws()
+        {
+            var ex = Assert.Throws<ArgumentNullException>(() => new OnlineCourse(null, "P", null));
+            Assert.Contains("title", ex.Message);
+        }
+
+        [Fact]
+        public void NullInstructor_Throws()
+        {
+            var course = new OnlineCourse("Test", "P", null);
+            
+            var ex = Assert.Throws<ArgumentNullException>(() => course.AssignInstructor(null));
+            Assert.Contains("instr", ex.Message);
+        }
+
+        [Fact]
+        public void NullStudent_Throws()
+        {
+            var course = new OnlineCourse("Test", "P", null);
+            
+            var ex = Assert.Throws<ArgumentNullException>(() => course.AddStudent(null));
+            Assert.Contains("s", ex.Message);
+        }
+
+        [Fact]
+        public void EmptyRename_Throws()
+        {
+            var course = new OnlineCourse("Test", "P", null);
+            
+            var ex = Assert.Throws<ArgumentException>(() => course.Rename(""));
+            Assert.Contains("cannot be empty", ex.Message);
+        }
+
+        [Fact]
+        public void EmptyPlatformChange_Throws()
+        {
+            var course = new OnlineCourse("Test", "P", null);
+            
+            var ex = Assert.Throws<ArgumentException>(() => course.ChangePlatform(""));
+            Assert.Contains("cannot be empty", ex.Message);
+        }
+
+        [Fact]
+        public void EmptyRoomChange_Throws()
+        {
+            var course = new OfflineCourse("Test", "L", "R");
+            
+            var ex = Assert.Throws<ArgumentException>(() => course.ChangeRoom(""));
+            Assert.Contains("cannot be empty", ex.Message);
+        }
+
+        [Fact]
+        public void EmptyLocationChange_Throws()
+        {
+            var course = new OfflineCourse("Test", "L", "R");
+            
+            var ex = Assert.Throws<ArgumentException>(() => course.ChangeLocation(""));
+            Assert.Contains("cannot be empty", ex.Message);
+        }
+
+        [Fact]
+        public void NullPlatform_Throws()
+        {
+            var ex = Assert.Throws<ArgumentNullException>(() => new OnlineCourse("T", null, null));
+            Assert.Contains("platform", ex.Message);
+        }
+
+        [Fact]
+        public void NullLocation_Throws()
+        {
+            var ex = Assert.Throws<ArgumentNullException>(() => new OfflineCourse("T", null, "R"));
+            Assert.Contains("location", ex.Message);
+        }
+
+        [Fact]
+        public void NullRoom_Throws()
+        {
+            var ex = Assert.Throws<ArgumentNullException>(() => new OfflineCourse("T", "L", null));
+            Assert.Contains("room", ex.Message);
+        }
+
+        [Fact]
+        public void NullStudentName_Throws()
+        {
+            var ex = Assert.Throws<ArgumentNullException>(() => new Student(null));
+            Assert.Contains("name", ex.Message);
+        }
+
+        [Fact]
+        public void NullInstructorName_Throws()
+        {
+            var ex = Assert.Throws<ArgumentNullException>(() => new Instructor(null));
+            Assert.Contains("name", ex.Message);
+        }
+    }
+
+    public class CourseBuilderTests
+    {
+        [Fact]
+        public void BuildOnlineCourse()
+        {
+            var course = CourseBuilder.Create()
+                .WithTitle("C#")
+                .AsOnline("Zoom")
+                .WithUrl("https://zoom.us")
+                .Build();
+            
+            Assert.IsType<OnlineCourse>(course);
+            Assert.Equal("C#", course.Title);
+            Assert.Equal("Zoom", ((OnlineCourse)course).Platform);
+            Assert.Equal("https://zoom.us/", ((OnlineCourse)course).Url?.ToString());
+        }
+
+        [Fact]
+        public void BuildOfflineCourse()
+        {
+            var course = CourseBuilder.Create()
+                .WithTitle("Math")
+                .AsOffline("Building A", "101")
+                .Build();
+            
+            Assert.IsType<OfflineCourse>(course);
+            Assert.Equal("Math", course.Title);
+            Assert.Equal("Building A", ((OfflineCourse)course).Location);
+            Assert.Equal("101", ((OfflineCourse)course).Room);
+        }
+
+        [Fact]
+        public void BuilderWithoutTitle_Throws()
+        {
+            var builder = CourseBuilder.Create();
+            
+            var ex = Assert.Throws<InvalidOperationException>(() => builder.AsOnline("P").Build());
+            Assert.Contains("Title required", ex.Message);
+        }
+
+        [Fact]
+        public void BuilderOnlineWithoutPlatform_Throws()
+        {
+            var builder = CourseBuilder.Create()
+                .WithTitle("Test");
+            
+            var ex = Assert.Throws<InvalidOperationException>(() => builder.AsOnline(null).Build());
+            Assert.Contains("Platform required", ex.Message);
+        }
+
+        [Fact]
+        public void BuilderOfflineWithoutLocation_Throws()
+        {
+            var builder = CourseBuilder.Create()
+                .WithTitle("Test");
+            
+            var ex = Assert.Throws<InvalidOperationException>(() => builder.AsOffline(null, "R").Build());
+            Assert.Contains("Location and room required", ex.Message);
+        }
+
+        [Fact]
+        public void BuilderOfflineWithoutRoom_Throws()
+        {
+            var builder = CourseBuilder.Create()
+                .WithTitle("Test");
+            
+            var ex = Assert.Throws<InvalidOperationException>(() => builder.AsOffline("L", null).Build());
+            Assert.Contains("Location and room required", ex.Message);
+        }
+    }
+
+    public class RepositoryTests
+    {
+        [Fact]
+        public void AddAndGetCourse()
+        {
+            var repo = new InMemoryCourseRepository();
+            var course = new OnlineCourse("C#", "Teams", null);
+            
+            repo.Add(course);
+            var result = repo.GetById(course.Id);
+            
+            Assert.Equal(course, result);
+        }
+
+        [Fact]
+        public void RemoveCourse()
+        {
+            var repo = new InMemoryCourseRepository();
+            var course = new OnlineCourse("C#", "Teams", null);
+            
+            repo.Add(course);
+            repo.Remove(course.Id);
+            
+            Assert.Null(repo.GetById(course.Id));
+        }
+
+        [Fact]
+        public void GetAllCourses()
+        {
+            var repo = new InMemoryCourseRepository();
+            repo.Add(new OnlineCourse("C#", "T", null));
+            repo.Add(new OfflineCourse("Math", "B", "R"));
+            
+            Assert.Equal(2, repo.GetAll().Count());
+        }
+
+        [Fact]
+        public void AddDuplicateCourse_Throws()
+        {
+            var repo = new InMemoryCourseRepository();
+            var course = new OnlineCourse("Test", "P", null);
+            
+            repo.Add(course);
+            
+            var ex = Assert.Throws<InvalidOperationException>(() => repo.Add(course));
+            Assert.Contains("already exists", ex.Message);
+        }
+
+        [Fact]
+        public void RemoveNonExistentCourse_Throws()
+        {
+            var repo = new InMemoryCourseRepository();
+            
+            var ex = Assert.Throws<KeyNotFoundException>(() => repo.Remove(Guid.NewGuid()));
+            Assert.Contains("not found", ex.Message);
+        }
+
+        [Fact]
+        public void AddNullCourse_Throws()
+        {
+            var repo = new InMemoryCourseRepository();
+            
+            var ex = Assert.Throws<ArgumentNullException>(() => repo.Add(null));
+            Assert.Contains("c", ex.Message);
+        }
+    }
+
+    public class CourseManagerTests
+    {
+        [Fact]
+        public void ManagerAddAndRemove()
+        {
+            var mgr = new CourseManager();
+            var course = new OnlineCourse("Test", "P", null);
+            
+            mgr.AddCourse(course);
+            Assert.Single(mgr.GetAllCourses());
+            
+            mgr.RemoveCourse(course.Id);
+            Assert.Empty(mgr.GetAllCourses());
+        }
+
+        [Fact]
+        public void ManagerEnrollStudent()
+        {
+            var mgr = new CourseManager();
+            var course = new OnlineCourse("C#", "P", null);
+            var student = new Student("Alice");
+            
+            mgr.AddCourse(course);
+            mgr.EnrollStudent(course.Id, student);
+            
+            var loaded = mgr.GetCourse(course.Id);
+            Assert.Single(loaded.Students);
+        }
+
+        [Fact]
+        public void ManagerUnenrollStudent()
+        {
+            var mgr = new CourseManager();
+            var course = new OnlineCourse("C#", "P", null);
+            var student = new Student("Bob");
+            
+            mgr.AddCourse(course);
+            mgr.EnrollStudent(course.Id, student);
+            mgr.UnenrollStudent(course.Id, student.Id);
+            
+            var loaded = mgr.GetCourse(course.Id);
+            Assert.Empty(loaded.Students);
+        }
+
+        [Fact]
+        public void ManagerAssignInstructor()
+        {
+            var mgr = new CourseManager();
+            var course = new OnlineCourse("C#", "P", null);
+            var instructor = new Instructor("John");
+            
+            mgr.AddCourse(course);
+            mgr.AssignInstructor(course.Id, instructor);
+            
+            var loaded = mgr.GetCourse(course.Id);
+            Assert.Equal(instructor, loaded.Instructor);
+        }
+
+        [Fact]
+        public void GetCoursesByInstructor()
+        {
+            var mgr = new CourseManager();
+            var instructor = new Instructor("Dr. X");
+            
+            var course1 = new OnlineCourse("C#", "P", null);
+            var course2 = new OfflineCourse("Math", "B", "R");
+            
+            mgr.AddCourse(course1);
+            mgr.AddCourse(course2);
+            
+            mgr.AssignInstructor(course1.Id, instructor);
+            mgr.AssignInstructor(course2.Id, instructor);
+            
+            var courses = mgr.GetCoursesByInstructor(instructor.Id);
+            Assert.Equal(2, courses.Count());
+        }
+
+        [Fact]
+        public void GetCoursesByInstructor_NoCourses()
+        {
+            var mgr = new CourseManager();
+            
+            var courses = mgr.GetCoursesByInstructor(Guid.NewGuid());
+            
+            Assert.Empty(courses);
+        }
+
+        [Fact]
+        public void ManagerGetNonExistentCourse_ReturnsNull()
+        {
+            var mgr = new CourseManager();
+            
+            var result = mgr.GetCourse(Guid.NewGuid());
+            
+            Assert.Null(result);
+        }
+
+        [Fact]
+        public void ManagerRemoveNonExistentCourse_Throws()
+        {
+            var mgr = new CourseManager();
+            
+            var ex = Assert.Throws<KeyNotFoundException>(() => mgr.RemoveCourse(Guid.NewGuid()));
+            Assert.Contains("not found", ex.Message);
+        }
+
+        [Fact]
+        public void ManagerAssignInstructorToNonExistentCourse_Throws()
+        {
+            var mgr = new CourseManager();
+            var instructor = new Instructor("Test");
+            
+            var ex = Assert.Throws<KeyNotFoundException>(() => mgr.AssignInstructor(Guid.NewGuid(), instructor));
+            Assert.Contains("not found", ex.Message);
+        }
+
+        [Fact]
+        public void ManagerEnrollStudentToNonExistentCourse_Throws()
+        {
+            var mgr = new CourseManager();
+            var student = new Student("Test");
+            
+            var ex = Assert.Throws<KeyNotFoundException>(() => mgr.EnrollStudent(Guid.NewGuid(), student));
+            Assert.Contains("not found", ex.Message);
+        }
+
+        [Fact]
+        public void ManagerUnenrollStudentFromNonExistentCourse_Throws()
+        {
+            var mgr = new CourseManager();
+            
+            var ex = Assert.Throws<KeyNotFoundException>(() => mgr.UnenrollStudent(Guid.NewGuid(), Guid.NewGuid()));
+            Assert.Contains("not found", ex.Message);
+        }
+
+        [Fact]
+        public void ManagerAddNullCourse_Throws()
+        {
+            var mgr = new CourseManager();
+            
+            var ex = Assert.Throws<ArgumentNullException>(() => mgr.AddCourse(null));
+            Assert.Contains("c", ex.Message);
+        }
+
+        [Fact]
+        public void ManagerAssignNullInstructor_Throws()
+        {
+            var mgr = new CourseManager();
+            var course = new OnlineCourse("Test", "P", null);
+            
+            mgr.AddCourse(course);
+            
+            var ex = Assert.Throws<ArgumentNullException>(() => mgr.AssignInstructor(course.Id, null));
+            Assert.Contains("instr", ex.Message);
+        }
+
+        [Fact]
+        public void ManagerEnrollNullStudent_Throws()
+        {
+            var mgr = new CourseManager();
+            var course = new OnlineCourse("Test", "P", null);
+            
+            mgr.AddCourse(course);
+            
+            var ex = Assert.Throws<ArgumentNullException>(() => mgr.EnrollStudent(course.Id, null));
+            Assert.Contains("s", ex.Message);
+        }
+
+        [Fact]
+        public void ManagerWithCustomRepository()
+        {
+            var repo = new InMemoryCourseRepository();
+            var mgr = new CourseManager(repo);
+            var course = new OnlineCourse("Test", "P", null);
+            
+            mgr.AddCourse(course);
+            
+            Assert.Single(repo.GetAll());
+        }
+
+        [Fact]
+        public void ManagerWithNullRepository_Throws()
+        {
+            var ex = Assert.Throws<ArgumentNullException>(() => new CourseManager(null));
+            Assert.Contains("repository", ex.Message);
+        }
+    }
+
+    public class IntegrationTests
+    {
+        [Fact]
+        public void CompleteScenario()
+        {
+            var mgr = new CourseManager();
+            
+            // Create courses with builder
+            var onlineCourse = CourseBuilder.Create()
+                .WithTitle("C# Programming")
+                .AsOnline("Teams")
+                .WithUrl("https://teams.com/csharp")
+                .Build();
+                
+            var offlineCourse = CourseBuilder.Create()
+                .WithTitle("Mathematics")
+                .AsOffline("Main Building", "Room 201")
+                .Build();
+            
+            mgr.AddCourse(onlineCourse);
+            mgr.AddCourse(offlineCourse);
+            
+            // Create instructor
+            var instructor = new Instructor("Professor Johnson");
+            mgr.AssignInstructor(onlineCourse.Id, instructor);
+            mgr.AssignInstructor(offlineCourse.Id, instructor);
+            
+            // Create and enroll students
+            var student1 = new Student("Alice Smith");
+            var student2 = new Student("Bob Wilson");
+            var student3 = new Student("Charlie Brown");
+            
+            mgr.EnrollStudent(onlineCourse.Id, student1);
+            mgr.EnrollStudent(onlineCourse.Id, student2);
+            mgr.EnrollStudent(offlineCourse.Id, student3);
+            
+            // Verify
+            Assert.Equal(2, mgr.GetAllCourses().Count());
+            
+            var instructorCourses = mgr.GetCoursesByInstructor(instructor.Id).ToList();
+            Assert.Equal(2, instructorCourses.Count());
+            
+            var loadedOnline = mgr.GetCourse(onlineCourse.Id) as OnlineCourse;
+            var loadedOffline = mgr.GetCourse(offlineCourse.Id) as OfflineCourse;
+            
+            Assert.NotNull(loadedOnline);
+            Assert.NotNull(loadedOffline);
+            Assert.Equal(2, loadedOnline.Students.Count());
+            Assert.Single(loadedOffline.Students);
+            Assert.Equal(instructor, loadedOnline.Instructor);
+            Assert.Equal(instructor, loadedOffline.Instructor);
+            
+            // Unenroll one student
+            mgr.UnenrollStudent(onlineCourse.Id, student1.Id);
+            
+            // Verify again
+            loadedOnline = mgr.GetCourse(onlineCourse.Id) as OnlineCourse;
+            Assert.Single(loadedOnline.Students);
+            
+            // Test toString
+            Assert.Contains("C# Programming", onlineCourse.ToString());
+            Assert.Contains("Mathematics", offlineCourse.ToString());
+            Assert.Contains("Professor Johnson", instructor.ToString());
+            Assert.Contains("Alice Smith", student1.ToString());
+        }
+    }
+}
